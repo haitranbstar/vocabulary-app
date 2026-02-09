@@ -1,65 +1,123 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useState } from "react";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
+import TopicCard from "@/components/TopicCard";
+import TopicForm from "@/components/TopicForm";
+import { Plus, BookOpen, Sparkles } from "lucide-react";
+
+export default function HomePage() {
+  const [showForm, setShowForm] = useState(false);
+  const topics = useQuery(api.topics.getTopics);
+  const deleteTopic = useMutation(api.topics.deleteTopic);
+
+  // Đếm số từ vựng của mỗi topic
+  const vocabularyCounts = useQuery(api.vocabulary.getVocabularyByTopic, 
+    topics?.[0] ? { topicId: topics[0]._id } : "skip"
+  );
+
+  const handleDelete = async (topicId: Id<"topics">) => {
+    if (confirm("Bạn có chắc muốn xóa chủ đề này? Tất cả từ vựng sẽ bị xóa.")) {
+      await deleteTopic({ topicId });
+    }
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div className="min-h-screen p-6 md:p-12">
+      {/* Header */}
+      <header className="max-w-6xl mx-auto mb-12">
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="flex items-center gap-4">
+            <div className="p-4 bg-gradient-to-br from-primary to-accent rounded-2xl">
+              <BookOpen className="text-white" size={36} />
+            </div>
+            <div>
+              <h1 className="text-3xl md:text-4xl font-bold text-white">VocabMaster</h1>
+              <p className="text-gray-400">Học từ vựng tiếng Anh hiệu quả</p>
+            </div>
+          </div>
+          <button onClick={() => setShowForm(true)} className="btn-primary">
+            <Plus size={20} />
+            Tạo Chủ Đề
+          </button>
+        </div>
+      </header>
+
+      {/* Stats */}
+      <section className="max-w-6xl mx-auto mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="glass-card p-6 flex items-center gap-4">
+            <div className="p-3 bg-primary/20 rounded-xl">
+              <BookOpen className="text-primary" size={24} />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-white">{topics?.length || 0}</p>
+              <p className="text-gray-400">Chủ Đề</p>
+            </div>
+          </div>
+          <div className="glass-card p-6 flex items-center gap-4">
+            <div className="p-3 bg-accent/20 rounded-xl">
+              <Sparkles className="text-accent" size={24} />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-white">0</p>
+              <p className="text-gray-400">Từ Đã Học</p>
+            </div>
+          </div>
+          <div className="glass-card p-6 flex items-center gap-4">
+            <div className="p-3 bg-success/20 rounded-xl">
+              <BookOpen className="text-success" size={24} />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-white">0%</p>
+              <p className="text-gray-400">Tiến Độ</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Topics Grid */}
+      <section className="max-w-6xl mx-auto">
+        <h2 className="text-2xl font-bold text-white mb-6">Chủ Đề Của Bạn</h2>
+        
+        {topics === undefined ? (
+          <div className="text-center py-12">
+            <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full mx-auto"></div>
+            <p className="text-gray-400 mt-4">Đang tải...</p>
+          </div>
+        ) : topics.length === 0 ? (
+          <div className="glass-card p-12 text-center">
+            <BookOpen className="mx-auto text-gray-500 mb-4" size={48} />
+            <h3 className="text-xl font-medium text-gray-300 mb-2">Chưa có chủ đề nào</h3>
+            <p className="text-gray-500 mb-6">Bắt đầu bằng cách tạo chủ đề mới và upload từ vựng</p>
+            <button onClick={() => setShowForm(true)} className="btn-primary">
+              <Plus size={20} />
+              Tạo Chủ Đề Đầu Tiên
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {topics.map((topic) => (
+              <TopicCard
+                key={topic._id}
+                topic={topic}
+                vocabularyCount={0}
+                onDelete={handleDelete}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Topic Form Modal */}
+      {showForm && (
+        <TopicForm
+          onClose={() => setShowForm(false)}
+          onSuccess={() => {}}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+      )}
     </div>
   );
 }
