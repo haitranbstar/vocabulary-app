@@ -1,7 +1,7 @@
 "use client";
 
 import { use, useState } from "react";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { 
@@ -48,6 +48,11 @@ export default function TopicDetailPage({ params }: PageProps) {
     example: "",
   });
 
+  const [aiExamples, setAiExamples] = useState<Record<string, string[]>>({});
+  const [isAiLoading, setIsAiLoading] = useState(false);
+
+  const generateAIExamples = useAction(api.ai.generateExamples);
+
   const speakWord = (word: string) => {
     const utterance = new SpeechSynthesisUtterance(word);
     utterance.lang = "en-US";
@@ -64,6 +69,23 @@ export default function TopicDetailPage({ params }: PageProps) {
       example: word.example || "",
     });
     setIsEditing(false);
+
+    // Fetch AI examples if not already loaded
+    if (!aiExamples[word._id]) {
+      fetchAIExamples(word.englishWord, word._id);
+    }
+  };
+
+  const fetchAIExamples = async (word: string, vocabId: string) => {
+    setIsAiLoading(true);
+    try {
+      const examples = await generateAIExamples({ word });
+      setAiExamples(prev => ({ ...prev, [vocabId]: examples }));
+    } catch (error) {
+      console.error("AI Generation failed:", error);
+    } finally {
+      setIsAiLoading(false);
+    }
   };
 
   const handleDelete = async (vocabId: Id<"vocabulary">) => {
@@ -87,17 +109,6 @@ export default function TopicDetailPage({ params }: PageProps) {
     });
   };
 
-  // Generate conversation examples (mock - có thể integrate AI sau)
-  const generateExamples = (word: string) => {
-    const templates = [
-      `I use "${word}" in my daily work.`,
-      `Can you explain what "${word}" means?`,
-      `This is a great example of "${word}".`,
-      `We discussed "${word}" in the meeting.`,
-      `The concept of "${word}" is important.`,
-    ];
-    return templates;
-  };
 
   if (!topic || !vocabulary) {
     return (
@@ -122,7 +133,7 @@ export default function TopicDetailPage({ params }: PageProps) {
             <div className="flex items-center gap-4 text-gray-400">
               <span className="flex items-center gap-2">
                 <Layers size={18} />
-                {vocabulary.length} từ vựng
+                {vocabulary?.length || 0} từ vựng
               </span>
             </div>
           </div>
@@ -282,15 +293,25 @@ export default function TopicDetailPage({ params }: PageProps) {
                     )}
 
                     <div className="p-4 bg-black/30 rounded-xl">
-                      <p className="text-sm text-gray-400 mb-2">Giao Tiếp Hàng Ngày</p>
-                      <ul className="space-y-2">
-                        {generateExamples(selectedWord.englishWord).map((ex, i) => (
-                          <li key={i} className="text-sm text-gray-300 flex items-start gap-2">
-                            <span className="text-accent">•</span>
-                            {ex}
-                          </li>
-                        ))}
-                      </ul>
+                      <p className="text-sm text-gray-400 mb-2">Giao Tiếp Hàng Ngày (AI)</p>
+                      {isAiLoading ? (
+                        <div className="flex items-center gap-2 py-2">
+                          <div className="animate-spin w-4 h-4 border-2 border-primary border-t-transparent rounded-full"></div>
+                          <p className="text-xs text-gray-500">Đang sinh câu ví dụ...</p>
+                        </div>
+                      ) : (
+                        <ul className="space-y-2">
+                          {(aiExamples[selectedWord._id] || []).map((ex, i) => (
+                            <li key={i} className="text-sm text-gray-300 flex items-start gap-2">
+                              <span className="text-accent">•</span>
+                              {ex}
+                            </li>
+                          ))}
+                          {!isAiLoading && !aiExamples[selectedWord._id] && (
+                            <li className="text-sm text-gray-500 italic">Không có ví dụ</li>
+                          )}
+                        </ul>
+                      )}
                     </div>
                   </div>
                 </>

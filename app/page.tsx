@@ -103,7 +103,7 @@ export default function HomePage() {
               <TopicCard
                 key={topic._id}
                 topic={topic}
-                vocabularyCount={0}
+                vocabularyCount={topic.vocabularyCount || 0}
                 onDelete={handleDelete}
               />
             ))}

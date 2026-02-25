@@ -5,7 +5,23 @@ import { mutation, query } from "./_generated/server";
 export const getTopics = query({
   args: {},
   handler: async (ctx) => {
-    return await ctx.db.query("topics").order("desc").collect();
+    const topics = await ctx.db.query("topics").order("desc").collect();
+    
+    // Lấy số lượng từ vựng cho mỗi topic
+    const topicsWithCount = await Promise.all(
+      topics.map(async (topic) => {
+        const count = await ctx.db
+          .query("vocabulary")
+          .withIndex("by_topic", (q) => q.eq("topicId", topic._id))
+          .collect();
+        return {
+          ...topic,
+          vocabularyCount: count.length,
+        };
+      })
+    );
+    
+    return topicsWithCount;
   },
 });
 
