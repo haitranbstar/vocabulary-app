@@ -308,6 +308,13 @@ export default function ReviewPage({ params }: PageProps) {
       <div className="min-h-screen p-6 md:p-12">
         <div className="max-w-2xl mx-auto">
           <header className="mb-8">
+            <button 
+              onClick={() => setExerciseType(null)}
+              className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition mb-4"
+            >
+              <ArrowLeft size={20} />
+              Quay lại chọn dạng bài tập
+            </button>
             <div className="flex items-center justify-between mb-4">
               <span className="text-gray-400">Câu {currentIndex + 1} / {questions.length}</span>
               <span className="text-primary font-bold">Điểm: {score}</span>
@@ -372,6 +379,13 @@ export default function ReviewPage({ params }: PageProps) {
       <div className="min-h-screen p-6 md:p-12">
         <div className="max-w-2xl mx-auto">
           <header className="mb-8">
+            <button 
+              onClick={() => setExerciseType(null)}
+              className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition mb-4"
+            >
+              <ArrowLeft size={20} />
+              Quay lại chọn dạng bài tập
+            </button>
             <div className="flex items-center justify-between mb-4">
               <span className="text-gray-400">Câu {currentIndex + 1} / {questions.length}</span>
               <span className="text-primary font-bold">Điểm: {score}</span>
@@ -435,6 +449,13 @@ export default function ReviewPage({ params }: PageProps) {
       <div className="min-h-screen p-6 md:p-12">
         <div className="max-w-4xl mx-auto">
           <header className="mb-8">
+            <button 
+              onClick={() => setExerciseType(null)}
+              className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition mb-4"
+            >
+              <ArrowLeft size={20} />
+              Quay lại chọn dạng bài tập
+            </button>
             <div className="flex items-center justify-between mb-4">
               <span className="text-gray-400">Ghép các cặp từ</span>
               <span className="text-primary font-bold">Đã ghép: {matchingPairs.matched.size / 2} / {matchingPairs.left.length}</span>

@@ -1,0 +1,20 @@
+1) tạo chủ đề và từ vựng:
++ nhập tên chủ đề tiếng anh
++ upload file excel có 2 cột tiếng anh, tiếng việt và phiên âm.
++ bấm Lưu để lưu lại thông tin từ vựng của chủ đề đó.
+2) detail chủ đề:
++ khi click vào một chủ đề sẽ ra danh sách các từ vựng.
++ click vào chi tiết một từ vựng thì sẽ ra nghĩa của từ vựng đó, phiên âm và ví dụ sử dụng từ đó trong câu, 5 câu ví dụ về từ vựng đó tromng giao tiếp hàng ngày.
++ có thể chỉnh sửa hoặc xóa từ vựng nếu cần thiết.
+3) tạo flash card:
++ bấm tạo flash card để tạo flash card cho danh sách từ vựng.
++ flash card sẽ hiển thị từ tiếng anh ở mặt trước và nghĩa tiếng việt ở mặt sau. có thể bấm vào flash card để lật mặt sau.
++ có thể chỉnh sửa hoặc xóa flash card nếu cần thiết.
++ có thể xem lại tất cả các flash card của chủ đề đó.
++ có thể nghe phát âm của từ tiếng anh bằng cách bấm vào biểu tượng loa trên flash card.
+4) bài tập ôn tập:
++ trong detail chủ đề có thể chọn ôn tập từ vựng, hệ thống tạo ra các bài tập ôn tập ngẫu nhiên từ danh sách từ vựng của chủ đề đó.
++ các loại trắc nghiệm:
+   - Trắc nghiệm: Chọn nghĩa đúng.
+   - Điền từ: Nghe âm thanh và gõ lại từ (Luyện chính tả).
+   - Ghép thẻ: Ghép từ tiếng Anh với nghĩa tiếng Việt tương ứng.

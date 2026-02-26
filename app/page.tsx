@@ -6,7 +6,8 @@ import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import TopicCard from "@/components/TopicCard";
 import TopicForm from "@/components/TopicForm";
-import { Plus, BookOpen, Sparkles } from "lucide-react";
+import { Plus, BookOpen, Sparkles, GraduationCap, ChevronRight } from "lucide-react";
+import Link from "next/link";
 
 export default function HomePage() {
   const [showForm, setShowForm] = useState(false);
@@ -76,6 +77,31 @@ export default function HomePage() {
             </div>
           </div>
         </div>
+      </section>
+
+      {/* Grammar CTA */}
+      <section className="max-w-6xl mx-auto mb-12">
+        <Link href="/grammar">
+          <div className="glass-card p-6 flex items-center justify-between hover:bg-white/5 transition group"
+            style={{ border: "1px solid rgba(34, 211, 238, 0.3)" }}
+          >
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-accent/20 rounded-xl">
+                <GraduationCap className="text-accent" size={28} />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">Học Ngữ Pháp</h3>
+                <p className="text-gray-400 text-sm">
+                  5 thì cơ bản • Hội thoại AI • Bài tập trắc nghiệm
+                </p>
+              </div>
+            </div>
+            <ChevronRight
+              size={24}
+              className="text-gray-500 group-hover:text-accent transition"
+            />
+          </div>
+        </Link>
       </section>
 
       {/* Topics Grid */}
