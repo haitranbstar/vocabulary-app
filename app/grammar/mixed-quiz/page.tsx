@@ -32,6 +32,8 @@ export default function MixedQuizPage() {
   const [showResult, setShowResult] = useState(false);
   const [showExplanation, setShowExplanation] = useState(false);
 
+  const [isRetry, setIsRetry] = useState(false);
+
   const generateMixedQuiz = useAction(api.ai.generateMixedQuiz);
 
   const handleStartQuiz = useCallback(async () => {
@@ -44,14 +46,17 @@ export default function MixedQuizPage() {
     setShowExplanation(false);
 
     try {
-      const result = await generateMixedQuiz({ questionCount: 20 });
-      setQuestions(result as QuizQuestion[]);
+      const result = await generateMixedQuiz({
+        questionCount: 20,
+        forceNew: isRetry,
+      });
+      setQuestions(result as unknown as QuizQuestion[]);
     } catch (error) {
       console.error("Failed to generate mixed quiz:", error);
     } finally {
       setIsLoading(false);
     }
-  }, [generateMixedQuiz]);
+  }, [generateMixedQuiz, isRetry]);
 
   const handleSelectAnswer = (answerIndex: number) => {
     if (selectedAnswer !== null) return;
@@ -93,7 +98,7 @@ export default function MixedQuizPage() {
           </div>
 
           <div className="flex gap-3">
-            <button onClick={handleStartQuiz} className="btn-secondary flex-1">
+            <button onClick={() => { setIsRetry(true); handleStartQuiz(); }} className="btn-secondary flex-1">
               <RotateCcw size={20} />
               Làm lại
             </button>

@@ -15,4 +15,11 @@ export default defineSchema({
     example: v.optional(v.string()),
     createdAt: v.number(),
   }).index("by_topic", ["topicId"]),
+
+  ai_cache: defineTable({
+    type: v.string(), // "conversation" | "grammar_quiz" | "mixed_quiz"
+    key: v.string(), // tenseName hoặc "mixed"
+    data: v.any(), // JSON data từ AI
+    createdAt: v.number(),
+  }).index("by_type_key", ["type", "key"]),
 });

@@ -38,6 +38,8 @@ export default function GrammarQuizPage({ params }: PageProps) {
   const [showResult, setShowResult] = useState(false);
   const [showExplanation, setShowExplanation] = useState(false);
 
+  const [isRetry, setIsRetry] = useState(false);
+
   const generateQuiz = useAction(api.ai.generateGrammarQuiz);
 
   const handleStartQuiz = useCallback(async () => {
@@ -54,14 +56,15 @@ export default function GrammarQuizPage({ params }: PageProps) {
       const result = await generateQuiz({
         tenseName: tense.name,
         questionCount: 20,
+        forceNew: isRetry,
       });
-      setQuestions(result as QuizQuestion[]);
+      setQuestions(result as unknown as QuizQuestion[]);
     } catch (error) {
       console.error("Failed to generate quiz:", error);
     } finally {
       setIsLoading(false);
     }
-  }, [tense, generateQuiz]);
+  }, [tense, generateQuiz, isRetry]);
 
   const handleSelectAnswer = (answerIndex: number) => {
     if (selectedAnswer !== null) return;
@@ -118,7 +121,7 @@ export default function GrammarQuizPage({ params }: PageProps) {
           </div>
 
           <div className="flex gap-3">
-            <button onClick={handleStartQuiz} className="btn-secondary flex-1">
+            <button onClick={() => { setIsRetry(true); handleStartQuiz(); }} className="btn-secondary flex-1">
               <RotateCcw size={20} />
               Làm lại
             </button>

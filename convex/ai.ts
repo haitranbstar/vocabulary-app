@@ -1,8 +1,77 @@
 import { v } from "convex/values";
-import { action } from "./_generated/server";
+import { action, internalMutation, internalQuery } from "./_generated/server";
+import { query } from "./_generated/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { internal } from "./_generated/api";
 
 const MODEL_NAME = "gemini-3-flash-preview";
+
+// --- Internal helpers: đọc/ghi cache ---
+
+export const getCache = internalQuery({
+  args: { type: v.string(), key: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("ai_cache")
+      .withIndex("by_type_key", (q) =>
+        q.eq("type", args.type).eq("key", args.key)
+      )
+      .first();
+  },
+});
+
+export const saveCache = internalMutation({
+  args: { type: v.string(), key: v.string(), data: v.any() },
+  handler: async (ctx, args) => {
+    // Xóa cache cũ nếu có
+    const existing = await ctx.db
+      .query("ai_cache")
+      .withIndex("by_type_key", (q) =>
+        q.eq("type", args.type).eq("key", args.key)
+      )
+      .first();
+    if (existing) {
+      await ctx.db.delete(existing._id);
+    }
+    // Lưu cache mới
+    await ctx.db.insert("ai_cache", {
+      type: args.type,
+      key: args.key,
+      data: args.data,
+      createdAt: Date.now(),
+    });
+  },
+});
+
+// --- Public query: Frontend lấy cache ---
+
+export const getCachedConversation = query({
+  args: { tenseName: v.string() },
+  handler: async (ctx, args) => {
+    const cached = await ctx.db
+      .query("ai_cache")
+      .withIndex("by_type_key", (q) =>
+        q.eq("type", "conversation").eq("key", args.tenseName)
+      )
+      .first();
+    return cached?.data ?? null;
+  },
+});
+
+export const getCachedQuiz = query({
+  args: { type: v.string(), key: v.string() },
+  handler: async (ctx, args) => {
+    const cached = await ctx.db
+      .query("ai_cache")
+      .withIndex("by_type_key", (q) =>
+        q.eq("type", args.type).eq("key", args.key)
+      )
+      .first();
+    return cached?.data ?? null;
+  },
+});
+
+// --- Actions: Gọi AI + lưu cache ---
 
 export const generateExamples = action({
   args: { word: v.string() },
@@ -25,17 +94,15 @@ export const generateExamples = action({
       const result = await model.generateContent(prompt);
       const response = await result.response;
       const text = response.text();
-      
-      // Extract JSON from the response text (handling potential markdown formatting)
+
       const jsonMatch = text.match(/\[[\s\S]*\]/);
       if (jsonMatch) {
         return JSON.parse(jsonMatch[0]) as string[];
       }
-      
+
       throw new Error("Failed to parse AI response as JSON");
     } catch (error) {
       console.error("Gemini API Error:", error);
-      // Fallback in case of error
       return [
         `I use "${args.word}" in my daily work.`,
         `Can you explain what "${args.word}" means?`,
@@ -47,10 +114,24 @@ export const generateExamples = action({
   },
 });
 
-// Tạo hội thoại AI theo thì ngữ pháp
+// Tạo hội thoại AI theo thì ngữ pháp (có cache)
 export const generateConversation = action({
-  args: { tenseName: v.string() },
-  handler: async (ctx, args) => {
+  args: {
+    tenseName: v.string(),
+    forceNew: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args): Promise<Record<string, unknown>> => {
+    // Kiểm tra cache trước
+    if (!args.forceNew) {
+      const cached = await ctx.runQuery(internal.ai.getCache, {
+        type: "conversation",
+        key: args.tenseName,
+      });
+      if (cached) {
+        return cached.data;
+      }
+    }
+
     const apiKey = process.env.GOOGLE_API_KEY;
     if (!apiKey) {
       throw new Error("GOOGLE_API_KEY is not set in environment variables");
@@ -82,13 +163,20 @@ Return ONLY the JSON object, no introductory text, no explanations, and no markd
 
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]);
+        const data = JSON.parse(jsonMatch[0]);
+        // Lưu cache
+        await ctx.runMutation(internal.ai.saveCache, {
+          type: "conversation",
+          key: args.tenseName,
+          data,
+        });
+        return data;
       }
 
       throw new Error("Failed to parse AI conversation response");
     } catch (error) {
       console.error("Gemini Conversation Error:", error);
-      return {
+      const fallback = {
         title: "Daily Routine",
         speakers: ["Tom", "Anna"],
         lines: [
@@ -98,17 +186,32 @@ Return ONLY the JSON object, no introductory text, no explanations, and no markd
           { speaker: "Anna", text: "I **understand**. That **is** a good example." },
         ],
       };
+      return fallback;
     }
   },
 });
 
-// Tạo bài tập trắc nghiệm cho một thì
+// Tạo bài tập trắc nghiệm cho một thì (có cache)
 export const generateGrammarQuiz = action({
   args: {
     tenseName: v.string(),
     questionCount: v.optional(v.number()),
+    forceNew: v.optional(v.boolean()),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<Record<string, unknown>[]> => {
+    const cacheKey = args.tenseName;
+
+    // Kiểm tra cache trước
+    if (!args.forceNew) {
+      const cached = await ctx.runQuery(internal.ai.getCache, {
+        type: "grammar_quiz",
+        key: cacheKey,
+      });
+      if (cached) {
+        return cached.data;
+      }
+    }
+
     const apiKey = process.env.GOOGLE_API_KEY;
     if (!apiKey) {
       throw new Error("GOOGLE_API_KEY is not set in environment variables");
@@ -146,7 +249,14 @@ Return ONLY the JSON array, no introductory text, no explanations, and no markdo
 
       const jsonMatch = text.match(/\[[\s\S]*\]/);
       if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]);
+        const data = JSON.parse(jsonMatch[0]);
+        // Lưu cache
+        await ctx.runMutation(internal.ai.saveCache, {
+          type: "grammar_quiz",
+          key: cacheKey,
+          data,
+        });
+        return data;
       }
 
       throw new Error("Failed to parse AI quiz response");
@@ -157,12 +267,24 @@ Return ONLY the JSON array, no introductory text, no explanations, and no markdo
   },
 });
 
-// Tạo bài tập tổng hợp tất cả các thì
+// Tạo bài tập tổng hợp tất cả các thì (có cache)
 export const generateMixedQuiz = action({
   args: {
     questionCount: v.optional(v.number()),
+    forceNew: v.optional(v.boolean()),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<Record<string, unknown>[]> => {
+    // Kiểm tra cache trước
+    if (!args.forceNew) {
+      const cached = await ctx.runQuery(internal.ai.getCache, {
+        type: "mixed_quiz",
+        key: "mixed",
+      });
+      if (cached) {
+        return cached.data;
+      }
+    }
+
     const apiKey = process.env.GOOGLE_API_KEY;
     if (!apiKey) {
       throw new Error("GOOGLE_API_KEY is not set in environment variables");
@@ -206,7 +328,14 @@ Return ONLY the JSON array, no introductory text, no explanations, and no markdo
 
       const jsonMatch = text.match(/\[[\s\S]*\]/);
       if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]);
+        const data = JSON.parse(jsonMatch[0]);
+        // Lưu cache
+        await ctx.runMutation(internal.ai.saveCache, {
+          type: "mixed_quiz",
+          key: "mixed",
+          data,
+        });
+        return data;
       }
 
       throw new Error("Failed to parse AI mixed quiz response");

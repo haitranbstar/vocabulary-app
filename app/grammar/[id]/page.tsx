@@ -1,7 +1,7 @@
 "use client";
 
-import { use, useState } from "react";
-import { useAction } from "convex/react";
+import { use, useState, useEffect } from "react";
+import { useAction, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { getTenseById } from "@/lib/grammarData";
 import {
@@ -40,7 +40,18 @@ export default function GrammarDetailPage({ params }: PageProps) {
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [isLoadingConversation, setIsLoadingConversation] = useState(false);
 
+  const cachedConversation = useQuery(
+    api.ai.getCachedConversation,
+    tense ? { tenseName: tense.name } : "skip"
+  );
   const generateConversation = useAction(api.ai.generateConversation);
+
+  // Load hội thoại đã cache
+  useEffect(() => {
+    if (cachedConversation && !conversation) {
+      setConversation(cachedConversation as Conversation);
+    }
+  }, [cachedConversation, conversation]);
 
   const speakText = (text: string) => {
     const cleanText = text.replace(/\*\*/g, "");
@@ -50,12 +61,15 @@ export default function GrammarDetailPage({ params }: PageProps) {
     speechSynthesis.speak(utterance);
   };
 
-  const handleGenerateConversation = async () => {
+  const handleGenerateConversation = async (forceNew = false) => {
     if (!tense) return;
     setIsLoadingConversation(true);
     try {
-      const result = await generateConversation({ tenseName: tense.name });
-      setConversation(result as Conversation);
+      const result = await generateConversation({
+        tenseName: tense.name,
+        forceNew,
+      });
+      setConversation(result as unknown as Conversation);
     } catch (error) {
       console.error("Failed to generate conversation:", error);
     } finally {
@@ -279,7 +293,7 @@ export default function GrammarDetailPage({ params }: PageProps) {
                   🤖 Hội Thoại AI
                 </h3>
                 <button
-                  onClick={handleGenerateConversation}
+                  onClick={() => handleGenerateConversation(!!conversation)}
                   disabled={isLoadingConversation}
                   className="btn-primary text-sm"
                 >
